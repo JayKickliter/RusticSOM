@@ -4,14 +4,26 @@
 use rand;
 use ndarray;
 use serde::{Serialize, Deserialize};
-
+use rand_distr::{Normal, LogNormal};
 use rand::random as random;
 use rand::Rng;
+use rand::distributions::{Distribution, Uniform};
 use ndarray::{Array1, Array2, Array3, Axis, ArrayView1, ArrayView2};
 use std::fmt;
-use std::f64::consts::PI as PI;
 use crate::functions::distance::euclid_dist;
 use crate::functions::neighbourhood::gaussian;
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct DataLabel {
+    label: String,
+}
+impl Default for DataLabel {
+    fn default() -> DataLabel {
+        DataLabel {
+            label: "none".to_string(),
+        }
+    }
+}
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct SomData {
@@ -22,6 +34,7 @@ pub struct SomData {
     sigma: f32,           // spread of neighbourhood function, default = 1.0
     regulate_lrate: u32,    // Regulates the learning rate w.r.t the number of iterations
     pub map: Array3<f64>,       // the SOM itself
+    pub tag_map: Option<Array2<DataLabel>>,
     pub activation_map: Array2<usize>,              // each cell represents how many times the corresponding cell in SOM was winner
 }
 
@@ -31,21 +44,63 @@ pub struct SOM {
     neighbourhood_function: fn((usize, usize), (usize, usize), f32) -> Array2<f64>,          // the function that determines the weights of the neighbours
 }
 
+pub enum DistType {
+    Normal,
+    Uniform,
+    LogNormal,
+}
 // Method definitions of the SOM struct
 impl SOM {
-
     // To create a Self-Organizing Map (SOM)
-    pub fn create(length: usize, breadth: usize, inputs: usize, randomize: bool, learning_rate: Option<f32>, sigma: Option<f32>, decay_function: Option<fn(f32, u32, u32) -> f64>, neighbourhood_function: Option<fn((usize, usize), (usize, usize), f32) -> Array2<f64>>) -> SOM {
+    pub fn create(
+        length: usize,
+        breadth: usize,
+        inputs: usize,
+        distribution: Option<DistType>,
+        rand_range: Option<(f64,f64)>,
+        learning_rate: Option<f32>,
+        sigma: Option<f32>,
+        decay_function: Option<fn(f32, u32, u32) -> f64>,
+        neighbourhood_function: Option<fn((usize, usize), (usize, usize), f32) -> Array2<f64>>) -> SOM {
         // Map of "length" x "breadth" is created, with depth "inputs" (for input vectors accepted by this SOM)
         // randomize: boolean; whether the SOM must be initialized with random weights or not
-
         let mut the_map = Array3::<f64>::zeros((length, breadth, inputs));
         let act_map = Array2::<usize>::zeros((length, breadth));
         let mut _init_regulate_lrate = 0;
 
-        if randomize {
-            for element in the_map.iter_mut() {
-                *element = random::<f64>();
+        match rand_range {
+            Some(b) => {
+                let mut rng = rand::thread_rng();
+                match distribution {
+                    Some(DistType::Uniform) => {
+                        let uniform = Uniform::new(b.0, b.1);
+                        for element in the_map.iter_mut() {
+                            *element = uniform.sample(&mut rng);
+                        }
+                    }
+                    Some(DistType::Normal) => {
+                        let normal = Normal::new(b.0, b.1).unwrap();
+                        for element in the_map.iter_mut() {
+                            *element = normal.sample(&mut rng);
+                        }
+                    }
+                    Some(DistType::LogNormal) => {
+                        let ln = LogNormal::new(b.0, b.1).unwrap();
+                        for element in the_map.iter_mut() {
+                            *element = ln.sample(&mut rng);
+                        }
+                    }
+                    None => {
+                        for element in the_map.iter_mut() {
+                            *element = random::<f64>();
+                        }
+                    }
+                }
+            }
+            None => {
+                for element in the_map.iter_mut() {
+                    *element = random::<f64>();
+                }
             }
         }
 
@@ -63,7 +118,8 @@ impl SOM {
             },
             activation_map: act_map,
             map: the_map,
-            regulate_lrate: _init_regulate_lrate
+            tag_map: None,
+            regulate_lrate: _init_regulate_lrate,
         };
         SOM {
             data,
@@ -88,6 +144,8 @@ impl SOM {
         for i in 0..self.data.x {
             for j in 0..self.data.y {
                 for k in 0..self.data.z {
+                    println!("{:?}", self.data.map[[i, j, k]]);
+                    println!("{:?}", elem[[k]]);
                     temp[k] = self.data.map[[i, j, k]] - elem[[k]];
                 }
 
@@ -107,7 +165,10 @@ impl SOM {
         ret
     }
 
-    pub fn from_json(serialized: &str,  decay_function: Option<fn(f32, u32, u32) -> f64>, neighbourhood_function: Option<fn((usize, usize), (usize, usize), f32) -> Array2<f64>>) -> serde_json::Result<SOM> {
+    pub fn from_json(
+        serialized: &str,
+        decay_function: Option<fn(f32, u32, u32) -> f64>,
+        neighbourhood_function: Option<fn((usize, usize), (usize, usize), f32) -> Array2<f64>>) -> serde_json::Result<SOM> {
         let data: SomData = serde_json::from_str(&serialized)?;
 
         Ok(SOM {
@@ -122,6 +183,7 @@ impl SOM {
             },
         })
     }
+
     pub fn to_json(&self) -> serde_json::Result<String> {
         serde_json::to_string_pretty(&self.data)
     }
@@ -306,7 +368,7 @@ mod tests {
 
     #[test]
     fn test_winner() {
-        let mut map = SOM::create(2, 3, 5, false, Some(0.1), None, None, None);
+        let mut map = SOM::create(2, 3, 5, Some(DistType::Uniform), Some((0.0, 1.0)), Some(0.1), None, None, None);
 
         for k in 0..5 {
             map.set_map_cell((1, 1, k), 1.5);
