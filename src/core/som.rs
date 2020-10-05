@@ -43,7 +43,7 @@ pub struct SomData {
 pub struct SOM {
     pub data: SomData,
     decay_function: fn(f32, u32, u32) -> f64,          // the function used to decay learning_rate and sigma
-    neighbourhood_function: fn((usize, usize), (usize, usize), f32) -> Array2<f64>,          // the function that determines the weights of the neighbours
+    neighbourhood_function: fn((usize, usize), (usize, usize), f64) -> Array2<f64>,          // the function that determines the weights of the neighbours
 }
 
 pub enum DistType {
@@ -64,7 +64,7 @@ impl SOM {
         learning_rate: Option<f32>,
         sigma: Option<f32>,
         decay_function: Option<fn(f32, u32, u32) -> f64>,
-        neighbourhood_function: Option<fn((usize, usize), (usize, usize), f32) -> Array2<f64>>) -> SOM {
+        neighbourhood_function: Option<fn((usize, usize), (usize, usize), f64) -> Array2<f64>>) -> SOM {
         // Map of "length" x "breadth" is created, with depth "inputs" (for input vectors accepted by this SOM)
         // randomize: boolean; whether the SOM must be initialized with random weights or not
         let mut the_map = Array3::<f64>::zeros((length, breadth, inputs));
@@ -207,7 +207,7 @@ impl SOM {
         let new_lr = (self.decay_function)(self.data.learning_rate, iteration_index, self.data.regulate_lrate);
         let new_sig = (self.decay_function)(self.data.sigma, iteration_index, self.data.regulate_lrate);
 
-        let g = (self.neighbourhood_function)((self.data.x, self.data.y), winner, new_sig as f32) * new_lr;
+        let g = (self.neighbourhood_function)((self.data.x, self.data.y), winner, new_sig) * new_lr;
 
         let mut _temp_norm: f64 = 0.0;
 
@@ -232,7 +232,7 @@ impl SOM {
     pub fn from_json(
         serialized: &str,
         decay_function: Option<fn(f32, u32, u32) -> f64>,
-        neighbourhood_function: Option<fn((usize, usize), (usize, usize), f32) -> Array2<f64>>) -> serde_json::Result<SOM> {
+        neighbourhood_function: Option<fn((usize, usize), (usize, usize), f64) -> Array2<f64>>) -> serde_json::Result<SOM> {
         let data: SomData = serde_json::from_str(&serialized)?;
 
         Ok(SOM {
@@ -257,7 +257,7 @@ impl SOM {
         let new_lr = (self.decay_function)(self.data.learning_rate, iteration_index, self.data.regulate_lrate);
         let new_sig = (self.decay_function)(self.data.sigma, iteration_index, self.data.regulate_lrate);
 
-        let g = (self.neighbourhood_function)((self.data.x, self.data.y), winner, new_sig as f32) * new_lr;
+        let g = (self.neighbourhood_function)((self.data.x, self.data.y), winner, new_sig) * new_lr;
 
         let mut _temp_norm: f64 = 0.0;
 
