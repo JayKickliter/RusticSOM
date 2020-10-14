@@ -60,7 +60,11 @@ fn t_full_test_random() {
 fn t_full_test_batch() {
     // Run with `cargo test -- --nocapture` to get output!
     // Plotted with Matplotlib
-    let mut map = SOM::create(10, 10, 4, false, None, None, None, None);
+    let mut map = SOMBuilder::new()
+        .dims((10, 10))
+        .sample_size(4)
+        .build()
+        .unwrap();
     let data = ndarray::arr2(&data::IRIS);
 
     map.train_batch(data.view(), 1000);

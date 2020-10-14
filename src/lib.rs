@@ -9,9 +9,6 @@ use std::fmt;
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde-1", derive(Deserialize, Serialize))]
 pub struct SomData {
-    x: usize,                      // length of SOM
-    y: usize,                      // breadth of SOM
-    z: usize,                      // size of inputs
     learning_rate: f32,            // initial learning rate
     sigma: f32,                    // spread of neighbourhood function, default = 1.0
     regulate_lrate: u32,           // Regulates the learning rate w.r.t the number of iterations
@@ -30,6 +27,70 @@ pub struct SOM {
     data: SomData,
     decay_fn: DecayFn,
     neighbourhood_fn: NeighbourhoodFn,
+}
+
+#[derive(Default, Clone)]
+pub struct SOMBuilder {
+    dims: Option<(usize, usize)>,
+    sample_size: Option<usize>,
+    randomize: bool,
+    learning_rate: Option<f32>,
+    sigma: Option<f32>,
+    decay_fn: Option<DecayFn>,
+    neighbourhood_fn: Option<NeighbourhoodFn>,
+}
+
+impl SOMBuilder {
+    pub fn new() -> Self {
+        Self::default()
+    }
+    pub fn dims(&mut self, ij: (usize, usize)) -> &mut Self {
+        self.dims = Some(ij);
+        self
+    }
+    pub fn sample_size(&mut self, k: usize) -> &mut Self {
+        self.sample_size = Some(k);
+        self
+    }
+    pub fn randomize(&mut self, randomize: bool) -> &mut Self {
+        self.randomize = randomize;
+        self
+    }
+    pub fn learning_rate(&mut self, learning_rate: f32) -> &mut Self {
+        self.learning_rate = Some(learning_rate);
+        self
+    }
+    pub fn sigma(&mut self, sigma: f32) -> &mut Self {
+        self.sigma = Some(sigma);
+        self
+    }
+    pub fn decay_fn(&mut self, decay_fn: DecayFn) -> &mut Self {
+        self.decay_fn = Some(decay_fn);
+        self
+    }
+    pub fn neighbourhood_fn(&mut self, neighbourhood_fn: NeighbourhoodFn) -> &mut Self {
+        self.neighbourhood_fn = Some(neighbourhood_fn);
+        self
+    }
+    pub fn build(&mut self) -> Result<SOM, Box<dyn std::error::Error>> {
+        let (i, j) = self.dims.ok_or("required: `dims`")?;
+        let k = self.sample_size.ok_or("required: `sample_size`")?;
+        Ok(SOM {
+            data: SomData {
+                learning_rate: self.learning_rate.unwrap_or(0.5),
+                sigma: self.sigma.unwrap_or(1.0),
+                regulate_lrate: 0,
+                map: if self.randomize {
+                    Array3::from_shape_simple_fn((i, j, k), random)
+                } else {
+                    Array3::zeros((i, j, k))
+                },
+                activation_map: Array2::zeros((i, j)),
+            },
+            decay_fn: self.decay_fn.unwrap_or(default_decay_fn),
+            neighbourhood_fn: self.neighbourhood_fn.unwrap_or(gaussian),
+        })
+    }
 }
 
 // Method definitions of the SOM struct
@@ -57,9 +118,6 @@ impl SOM {
         let act_map = Array2::zeros((length, breadth));
 
         let data = SomData {
-            x: length,
-            y: breadth,
-            z: inputs,
             learning_rate: learning_rate.unwrap_or(0.5),
             sigma: sigma.unwrap_or(1.0),
             activation_map: act_map,
@@ -101,16 +159,20 @@ impl SOM {
         );
         let new_sig = (self.decay_fn)(self.data.sigma, iteration_index, self.data.regulate_lrate);
 
-        let g = (self.neighbourhood_fn)((self.data.x, self.data.y), winner, new_sig) * new_lr;
+        let g = (self.neighbourhood_fn)(
+            (self.data.map.dim().0, self.data.map.dim().1),
+            winner,
+            new_sig,
+        ) * new_lr;
 
-        for i in 0..self.data.x {
-            for j in 0..self.data.y {
-                for k in 0..self.data.z {
+        for i in 0..self.data.map.dim().0 {
+            for j in 0..self.data.map.dim().1 {
+                for k in 0..self.data.map.dim().2 {
                     self.data.map[[i, j, k]] += (elem[[k]] - self.data.map[[i, j, k]]) * g[[i, j]];
                 }
 
                 let norm = norm(self.data.map.index_axis(Axis(0), i).index_axis(Axis(0), j));
-                for k in 0..self.data.z {
+                for k in 0..self.data.map.dim().2 {
                     self.data.map[[i, j, k]] /= norm;
                 }
             }
@@ -174,19 +236,19 @@ impl SOM {
 
     /// Returns `self`'s size in `(rows, cols)`.
     pub fn get_size(&self) -> (usize, usize) {
-        (self.data.x, self.data.y)
+        (self.data.map.dim().0, self.data.map.dim().1)
     }
 
     // Returns the distance map of each neuron / the normalised sum of a neuron to every other neuron in the map.
     pub fn distance_map(&self) -> Array2<f64> {
-        let mut dist_map = Array2::<f64>::zeros((self.data.x, self.data.y));
+        let mut dist_map = Array2::<f64>::zeros((self.data.map.dim().0, self.data.map.dim().1));
         let mut temp_dist: f64;
         let mut max_dist: f64 = 0.0;
-        for i in 0..self.data.x {
-            for j in 0..self.data.y {
+        for i in 0..self.data.map.dim().0 {
+            for j in 0..self.data.map.dim().1 {
                 temp_dist = 0.0;
-                for k in 0..self.data.x {
-                    for l in 0..self.data.y {
+                for k in 0..self.data.map.dim().0 {
+                    for l in 0..self.data.map.dim().1 {
                         temp_dist += euclid_dist(
                             self.data.map.index_axis(Axis(0), i).index_axis(Axis(0), j),
                             self.data.map.index_axis(Axis(0), k).index_axis(Axis(0), l),
@@ -207,8 +269,8 @@ impl SOM {
         // assert here for the time being.
         debug_assert!(max_dist.abs() > 0.0);
 
-        for i in 0..self.data.x {
-            for j in 0..self.data.y {
+        for i in 0..self.data.map.dim().0 {
+            for j in 0..self.data.map.dim().1 {
                 dist_map[[i, j]] /= max_dist;
             }
         }
@@ -237,13 +299,13 @@ impl fmt::Display for SOM {
             println!("[{}, {}] : {}", i, j, vector);
 
             j += 1;
-            if j == self.data.y {
+            if j == self.data.map.dim().1 {
                 j = 0;
                 i += 1;
             }
         }
 
-        write!(f, "\nSOM Shape = ({}, {})\nExpected input vectors of length = {}\nSOM learning rate regulator = {}", self.data.x, self.data.y, self.data.z, self.data.regulate_lrate)
+        write!(f, "\nSOM Shape = ({}, {})\nExpected input vectors of length = {}\nSOM learning rate regulator = {}", self.data.map.dim().0, self.data.map.dim().1, self.data.map.dim().2, self.data.regulate_lrate)
     }
 }
 
