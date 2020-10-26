@@ -4,7 +4,7 @@ use rand::Rng;
 use serde::{Deserialize, Serialize};
 use std::f64::consts::PI;
 use std::fmt;
-
+use std::collections::HashMap;
 #[derive(Serialize, Deserialize, Debug)]
 pub struct SomData {
     x: usize,                      // length of SOM
@@ -15,6 +15,8 @@ pub struct SomData {
     regulate_lrate: u32,           // Regulates the learning rate w.r.t the number of iterations
     map: Array3<f64>,              // the SOM itself
     activation_map: Array2<usize>, // each cell represents how many times the corresponding cell in SOM was winner
+    tag_map: Array2<String>,       // each cell contains the associated classification predicted by the SOM
+    classes: HashMap<String, f32>, // X classes with Y associated weights
 }
 
 /// A function for determining neighbours' weights.
@@ -42,6 +44,7 @@ impl SOM {
         sigma: Option<f32>,
         decay_fn: Option<DecayFn>,
         neighbourhood_fn: Option<NeighbourhoodFn>,
+        classes: Option<HashMap<String, f32>>,
     ) -> SOM {
         // Map of "length" x "breadth" is created, with depth "inputs" (for input vectors accepted by this SOM)
         // randomize: boolean; whether the SOM must be initialized with random weights or not
@@ -50,9 +53,9 @@ impl SOM {
         } else {
             Array3::zeros((length, breadth, inputs))
         };
-
+        println!("{:?}", the_map.view());
         let act_map = Array2::zeros((length, breadth));
-
+        let tag_map = Array2::from_elem((length, breadth), "none".to_string());
         let data = SomData {
             x: length,
             y: breadth,
@@ -61,6 +64,8 @@ impl SOM {
             sigma: sigma.unwrap_or(1.0),
             activation_map: act_map,
             map: the_map,
+            tag_map,
+            classes: classes.unwrap_or(HashMap::new()),
             regulate_lrate: 0,
         };
         SOM {
@@ -328,7 +333,7 @@ mod tests {
 
     #[test]
     fn test_winner() {
-        let mut map = SOM::create(2, 3, 5, false, Some(0.1), None, None, None);
+        let mut map = SOM::create(2, 3, 5, false, Some(0.1), None, None, None, None);
 
         for k in 0..5 {
             map.set_map_cell((1, 1, k), 1.5);
