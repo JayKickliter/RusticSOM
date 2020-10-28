@@ -16,7 +16,7 @@ pub struct SomData {
     z: usize,                      // size of inputs
     learning_rate: f32,            // initial learning rate
     sigma: f32,                    // spread of neighbourhood function, default = 1.0
-    regulate_lrate: f64,           // Regulates the learning rate w.r.t the number of iterations
+    regulate_lrate: u32,           // Regulates the learning rate w.r.t the number of iterations
     map: Array3<f64>,              // the SOM itself
     activation_map: Array2<usize>, // each cell represents how many times the corresponding cell in SOM was winner
     tag_map: Array2<String>,       // each cell contains the associated classification predicted by the SOM
@@ -80,7 +80,7 @@ impl SOM {
             },
             tag_activation_map_intermed: Array2::zeros((length, breadth)),
             classes: classes.unwrap_or(HashMap::new()),
-            regulate_lrate: 0.0,
+            regulate_lrate: 0,
         };
         SOM {
             data,
@@ -214,7 +214,6 @@ impl SOM {
             }
             let win = self.winner(temp1);
             self.update(temp2, win, iteration);
-            self.update_regulate_lrate(iteration, iterations);
         }
     }
 
@@ -344,10 +343,17 @@ impl SOM {
             }
         }
     }
+
     // Update learning rate regulator (keep learning rate constant with increase in number of iterations)
-    fn update_regulate_lrate(&mut self, iteration: u32, iterations: u32) {
+    fn update_lrate(&mut self, iteration: u32, iterations: u32) {
         //self.data.regulate_lrate = iterations / 2;
-        self.data.regulate_lrate = self.data.regulate_lrate * (- (iteration as f64 / iterations as f64)).exp();
+        //self.data.regulate_lrate = self.data.learning_rate as  * (- (iteration as f64 / iterations as f64)).exp();
+    }
+
+
+    // Update learning rate regulator (keep learning rate constant with increase in number of iterations)
+    fn update_regulate_lrate(&mut self, iterations: u32) {
+        self.data.regulate_lrate = iterations / 2;
     }
 
     // Returns the activation map of the SOM, where each cell at (i, j) represents how many times the cell at (i, j) in the SOM was picked a winner neuron.
