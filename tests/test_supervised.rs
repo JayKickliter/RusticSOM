@@ -35,6 +35,7 @@ fn normalize_sig(rssi: f64, snr: f64, fspl: f64) -> [f64; 3] {
     let sout = (snr - (-19.0))/((17.0-(-19.0)));
     let fout = (fspl - (-164.0))/((0.0-(-164.0)));
     [rout, sout, fout]
+    //[rssi, snr, fspl]
 }
 
 #[derive(Serialize, Deserialize, Debug, Default)]
@@ -68,7 +69,7 @@ fn test_supervised() -> Result<(), Box<dyn std::error::Error>> {
             slabel: match record.label {
                 1 => "real".to_string(),
                 0 => "fake".to_string(),
-                _ => "none".to_string(),
+                _ => "undefined".to_string(),
             }
         };
         samples.push(rec_tag);
@@ -84,6 +85,7 @@ fn test_supervised() -> Result<(), Box<dyn std::error::Error>> {
     let mut classes: HashMap<String, f64> = HashMap::new();
     classes.insert("real".to_string(), 0.0);
     classes.insert("fake".to_string(), 0.0);
+    //classes.insert("undefined".to_string(), 0.0);
 
     let mut map = SOM::create(10, 10, 3, true, Some(0.5), None, None, None, Some(classes));
     let newdat = Array2::from(fmtdata);
@@ -101,6 +103,10 @@ fn test_supervised() -> Result<(), Box<dyn std::error::Error>> {
     file.write_all(map.to_json()?.as_bytes())?;
 
     map.train_random_supervised(newdat2, newlabel, 1600);
+    //map.initialize_classes(newdat2, newlabel);
+    file = File::create("outputs/output_supervised.json")?;
+    file.write_all(map.to_json()?.as_bytes())?;
+
     /*
     let mut count = 0;
     for x in newdat2.genrows() {
