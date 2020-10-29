@@ -15,9 +15,9 @@ pub struct SomData {
     sigma: f32,                                 // spread of neighbourhood function, default = 1.0
     regulate_lrate: u32, // Regulates the learning rate w.r.t the number of iterations
     maximum_iterations: u32, // Maximum number of iterations per training session
-    map: Array3<f64>,    // the SOM itself
+    pub map: Array3<f64>,    // the SOM itself
     activation_map: Array2<usize>, // each cell represents how many times the corresponding cell in SOM was winner
-    tag_map: Array2<String>, // each cell contains the associated classification predicted by the SOM
+    pub tag_map: Array2<String>, // each cell contains the associated classification predicted by the SOM
     tag_activation_map: Array3<usize>, // each cell represents the how many times the corresponding tag was winner for a cell
     tag_activation_map_intermed: Array2<usize>, // Identical to tag activation map but preserving a copy between unsupervised and supervised learning
     classes: HashMap<String, f64>,              // X classes with Y associated weights
