@@ -246,7 +246,7 @@ impl SOM {
         let mut temp1: Array1<f64>;
         let mut ctemp1: String;
         self.update_regulate_lrate(iterations);
-        if self.data.custom_weighting {
+        if !self.data.custom_weighting {
             self.cal_class_weights(class_data.clone());
         }
         for iteration in 0..iterations {
@@ -313,7 +313,7 @@ impl SOM {
         let mut temp1: Array1<f64>;
         let mut ctemp1: String;
         let mut temp2: Array1<f64>;
-        if self.data.custom_weighting {
+        if !self.data.custom_weighting {
             self.cal_class_weights(class_data.clone());
         }
         self.update_regulate_lrate(iterations);
