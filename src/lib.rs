@@ -24,6 +24,7 @@ pub struct SomData {
     tag_activation_map: Array3<usize>, // each cell represents the how many times the corresponding tag was winner for a cell
     tag_activation_map_intermed: Array2<usize>,
     classes: HashMap<String, f64>, // X classes with Y associated weights
+    custom_weighting: bool,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -58,6 +59,7 @@ impl SOM {
         decay_fn: Option<DecayFn>,
         neighbourhood_fn: Option<NeighbourhoodFn>,
         classes: Option<HashMap<String, f64>>,
+        custom_weighting: bool,
     ) -> SOM {
         //let _ = simple_logging::log_to_file(format!("logs/warn.log"), LevelFilter::Warn);
         //let _ = simple_logging::log_to_file(format!("logs/info.log"), LevelFilter::Info);
@@ -92,6 +94,7 @@ impl SOM {
             tag_activation_map_intermed: Array2::zeros((length, breadth)),
             classes: classes.unwrap_or(HashMap::new()),
             regulate_lrate: 0,
+            custom_weighting,
         };
         SOM {
             data,
@@ -255,7 +258,9 @@ impl SOM {
         let mut temp1: Array1<f64>;
         let mut ctemp1: String;
         self.update_regulate_lrate(iterations);
-        self.cal_class_weights(class_data.clone());
+        if self.data.custom_weighting {
+            self.cal_class_weights(class_data.clone());
+        }
         for iteration in 0..iterations{
             temp1 = Array1::<f64>::zeros(ndarray::ArrayBase::dim(&data).1);
             random_value = rand::thread_rng().gen_range(0, ndarray::ArrayBase::dim(&data).0 as i32);
@@ -318,6 +323,9 @@ impl SOM {
         let mut temp1: Array1<f64>;
         let mut ctemp1: String;
         let mut temp2: Array1<f64>;
+        if self.data.custom_weighting {
+            self.cal_class_weights(class_data.clone());
+        }
         self.update_regulate_lrate(iterations);
         for iteration in 0..iterations{
             temp1 = Array1::<f64>::zeros(ndarray::ArrayBase::dim(&data).1);
@@ -553,7 +561,7 @@ mod tests {
 
     #[test]
     fn test_winner() {
-        let mut map = SOM::create(2, 3, 5, false, Some(0.1), None, None, None, None);
+        let mut map = SOM::create(2, 3, 5, false, Some(0.1), None, None, None, None, false);
 
         for k in 0..5 {
             map.set_map_cell((1, 1, k), 1.5);
