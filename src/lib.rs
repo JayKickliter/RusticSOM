@@ -484,26 +484,26 @@ impl fmt::Display for SOM {
 }
 
 // Returns the 2-norm of a vector represented as a 1D ArrayView
-fn distance(a: ArrayView1<f64>) -> f64 {
+pub fn distance(a: ArrayView1<f64>) -> f64 {
     a.iter().map(|elem| elem.powi(2)).sum::<f64>().sqrt()
 }
 
 // The default decay function for LR and Sigma
-fn default_decay_fn(val: f32, curr_iter: u32, max_iter: u32) -> f64 {
+pub fn default_decay_fn(val: f32, curr_iter: u32, max_iter: u32) -> f64 {
     //(val as f64) / ((1 + (curr_iter / max_iter)) as f64)
     //(val as f64) * (1.0 - (curr_iter / max_iter) as f64)
     val as f64 * (-(curr_iter as f64 / max_iter as f64)).exp()
 }
 
 #[allow(unused)]
-fn exponential_decay_fn(val: f32, curr_iter: u32, max_iter: u32) -> f64 {
+pub fn exponential_decay_fn(val: f32, curr_iter: u32, max_iter: u32) -> f64 {
     (val as f64) * (-(curr_iter as f64/max_iter as f64)).exp()
 }
 
 /// Default neighborhood function.
 ///
 /// Returns a two-dimensional Gaussian distribution centered at `pos`.
-fn gaussian(dims: (usize, usize), pos: (usize, usize), sigma: f32) -> Array2<f64> {
+pub fn gaussian(dims: (usize, usize), pos: (usize, usize), sigma: f32) -> Array2<f64> {
     let div = 2.0 * PI * (sigma as f64).powi(2);
 
     let shape_fn = |(i, j)| {
@@ -519,7 +519,7 @@ fn gaussian(dims: (usize, usize), pos: (usize, usize), sigma: f32) -> Array2<f64
 ///
 /// Returns a two-dimensional Gaussian distribution centered at `pos`.
 #[allow(unused)]
-fn mh_neighborhood(dims: (usize, usize), pos: (usize, usize), sigma: f32) -> Array2<f64> {
+pub fn mh_neighborhood(dims: (usize, usize), pos: (usize, usize), sigma: f32) -> Array2<f64> {
     let div = 2.0 * PI * (sigma as f64).powi(2);
 
     let shape_fn = |(i, j)| {
