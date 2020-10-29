@@ -91,22 +91,23 @@ fn test_supervised() -> Result<(), Box<dyn std::error::Error>> {
     let newdat = Array2::from(fmtdata);
     let newdat2 = newdat.clone();
     let newlabel = Array1::from(fmtclass);
-
+/*
     let sw = Stopwatch::start_new();
     map.train_random(newdat, 1600);
     println!("TrainUnsupervised: {:?}", sw.elapsed());
 
     let dist_map = map.distance_map();
     println!("{:?}", dist_map);
-
+*/
     let mut file = File::create("outputs/output_unsupervised.json")?;
     file.write_all(map.to_json()?.as_bytes())?;
 
+    let sw2 = Stopwatch::start_new();
     map.train_random_supervised(newdat2, newlabel, 1600);
+    println!("TrainSupervised: {:?}", sw2.elapsed());
     //map.initialize_classes(newdat2, newlabel);
     file = File::create("outputs/output_supervised.json")?;
     file.write_all(map.to_json()?.as_bytes())?;
-
     /*
     let mut count = 0;
     for x in newdat2.genrows() {
