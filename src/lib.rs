@@ -406,6 +406,14 @@ impl SOM {
         )
     }
 
+    /// Returns values associated with winner node from map and tag_map
+    pub fn winner_vals(&mut self, elem: Array1<f64>) -> (((usize, usize), f64), String) {
+        // TODO: use more descriptive names than temp[..]
+        let temp = self.winner(elem.clone());
+        self.data.tag_map.index_axis(Axis(0), temp.0).index_axis(Axis(0), temp.1);
+        // TODO: Get rid of this clone!
+        (self.winner_dist(elem), self.data.tag_map[[temp.0, temp.1]].clone())
+    }
     // Returns size of SOM.
     pub fn get_size(&self) -> (usize, usize) {
         (self.data.x, self.data.y)
