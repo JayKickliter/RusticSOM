@@ -50,7 +50,7 @@ impl SOM {
         decay_fn: Option<DecayFn>,
         neighbourhood_fn: Option<NeighbourhoodFn>,
         classes: Option<HashMap<String, f64>>,
-        custom_weighting: bool,
+        custom_weighting: Option<bool>,
     ) -> SOM {
         // Map of "length" x "breadth" is created, with depth "inputs" (for input vectors accepted by this SOM)
         // randomize: boolean; whether the SOM must be initialized with random weights or not
@@ -81,7 +81,13 @@ impl SOM {
             tag_activation_map_intermed: Array2::zeros((length, breadth)),
             classes: classes.unwrap_or(HashMap::new()),
             regulate_lrate: 0,
-            custom_weighting,
+            custom_weighting: {
+                if let Some(w) = custom_weighting {
+                    w
+                } else {
+                    false
+                }
+            },
         };
         SOM {
             data,
@@ -548,7 +554,7 @@ mod tests {
 
     #[test]
     fn test_winner() {
-        let mut map = SOM::create(2, 3, 5, false, Some(0.1), None, None, None, None, false);
+        let mut map = SOM::create(2, 3, 5, false, Some(0.1), None, None, None, None, None);
 
         for k in 0..5 {
             map.set_map_cell((1, 1, k), 1.5);

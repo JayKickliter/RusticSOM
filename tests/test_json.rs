@@ -8,7 +8,7 @@ use rusticsom::*;
 fn t_full_test() {
     // Run with `cargo test -- --nocapture` to get output!
     // Plotted with Matplotlib
-    let mut map = SOM::create(10, 10, 4, false, None, None, None, None, None, false);
+    let mut map = SOM::create(10, 10, 4, false, None, None, None, None, None, None);
     let data = array![
         [5.1, 3.5, 1.4, 0.2],
         [4.9, 3.0, 1.4, 0.2],
