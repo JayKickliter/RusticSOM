@@ -27,7 +27,7 @@ use rusticsom::SOM;
 Use `SOM::create` to create an SOM object using the API call below, which creates an SOM with `length x breadth` cells and accepts neurons of length `inputs`.
 
 ```rust
-pub fn create(length: usize, breadth: usize, inputs: usize, randomize: bool, learning_rate: Option<f32>, sigma: Option<f32>, decay_function: Option<fn(f32, u32, u32) -> f64>, neighbourhood_function: Option<fn((usize, usize), (usize, usize), f32) -> Array2<f64>>) -> SOM { ... }
+pub fn create(length: usize, breadth: usize, inputs: usize, randomize: bool, learning_rate: Option<f32>, sigma: Option<f32>, decay_function: Option<fn(f32, u32, u32) -> f64>, neighbourhood_function: Option<fn((usize, usize), (usize, usize), f32) -> Array2<f64>>, classes: Option<HashMap<String, f64>>, custom_weighting: bool) -> SOM { ... }
 ```
 
 `randomize` is a flag, which, if true, initializes the weights of each cell to random, small, floating-point values.
@@ -41,6 +41,10 @@ pub fn create(length: usize, breadth: usize, inputs: usize, randomize: bool, lea
     new_value = old_value / (1 + current_iteration/total_iterations)
 
 `neighbourhood_function`, optional, is also a function pointer that accepts functions that take 3 parameters, a tuple of type `(usize, usize)` representing the size of the SOM, another tuple of type `(usize, usize)` representing the position of the winner neuron, and an `f32` representing `sigma`; and returns a 2D Array containing weights of the neighbours of the winning neuron, i.e, centered at `winner`. By default, the Gaussian function will be used, which returns a "Gaussian centered at the winner neuron".
+
+`classes`, optional, a map of classes in the training data and their weights for supervised learning or class weight initialization. `None` will initialize all nodes to "undefined" classification and weighting of 0.0.
+
+`custom_weighting`, is a flag to utilize a custom weighting value associated with a class defined in `classes`, or allow the supervised learning method to weight the training set classes by their percentage distribution in the dataset.
 
 ---
 
@@ -69,6 +73,16 @@ pub fn train_batch(&mut self, data: Array2<f64>, iterations: u32) { ... }
 ```
 
 Samples (rows) from the 2D Array `data` are picked sequentially and the SOM is trained for `iterations` iterations!
+
+---
+
+```rust
+pub fn train_random_supervised(&mut self, data: Array2<f64>, class_data: Array1<String>, iterations: u32) { ... }
+```
+
+Samples (rows) from the 2D Array `data` are picked randomly and the SOM is trained for `iterations` iterations!
+
+Samples (rows) from the 1D Array `class_data` are picked randomly for supervised classification training for `iterations` iterations!
 
 ---
 
