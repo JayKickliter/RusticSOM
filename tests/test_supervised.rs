@@ -1,11 +1,11 @@
-use rusticsom::SOM;
-use ndarray::{Array2, Array1};
 use csv;
+use ndarray::{Array1, Array2};
+use rusticsom::SOM;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::fs::File;
 use std::io::prelude::*;
 use stopwatch::Stopwatch;
-use std::collections::HashMap;
 
 #[derive(Serialize, Deserialize, Debug, Default)]
 struct TestSamples {
@@ -31,16 +31,15 @@ struct TestSamplesTag {
 }
 
 fn normalize_sig(rssi: f64, snr: f64, fspl: f64) -> [f64; 3] {
-    let rout = (rssi - (-134.0))/((0.0-(-134.0)));
-    let sout = (snr - (-19.0))/((17.0-(-19.0)));
-    let fout = (fspl - (-164.0))/((0.0-(-164.0)));
+    let rout = (rssi - (-134.0)) / (0.0 - (-134.0));
+    let sout = (snr - (-19.0)) / (17.0 - (-19.0));
+    let fout = (fspl - (-164.0)) / (0.0 - (-164.0));
     [rout, sout, fout]
     //[rssi, snr, fspl]
 }
 
 #[test]
 fn test_unsupervised() -> Result<(), Box<dyn std::error::Error>> {
-
     // Read training samples from file and parse into structure for consumption
     let mut samples: Vec<TestSamplesTag> = Vec::new();
     let rdr = csv::ReaderBuilder::new()
@@ -61,7 +60,7 @@ fn test_unsupervised() -> Result<(), Box<dyn std::error::Error>> {
                 1 => "real".to_string(),
                 0 => "fake".to_string(),
                 _ => "undefined".to_string(),
-            }
+            },
         };
         samples.push(rec_tag);
     }
@@ -82,7 +81,18 @@ fn test_unsupervised() -> Result<(), Box<dyn std::error::Error>> {
     classes.insert("fake".to_string(), 0.0);
 
     // Create a new SOM using default settings
-    let mut map = SOM::create(10, 10, 3, true, Some(0.5), None, None, None, Some(classes), false);
+    let mut map = SOM::create(
+        10,
+        10,
+        3,
+        true,
+        Some(0.5),
+        None,
+        None,
+        None,
+        Some(classes),
+        false,
+    );
     let newdat = Array2::from(fmtdata);
     let newdat2 = newdat.clone();
 
@@ -110,7 +120,6 @@ fn test_unsupervised() -> Result<(), Box<dyn std::error::Error>> {
 
 #[test]
 fn test_supervised() -> Result<(), Box<dyn std::error::Error>> {
-
     // Read training samples from file and parse into structure for consumption
     let mut samples: Vec<TestSamplesTag> = Vec::new();
     let rdr = csv::ReaderBuilder::new()
@@ -131,7 +140,7 @@ fn test_supervised() -> Result<(), Box<dyn std::error::Error>> {
                 1 => "real".to_string(),
                 0 => "fake".to_string(),
                 _ => "undefined".to_string(),
-            }
+            },
         };
         samples.push(rec_tag);
     }
@@ -149,7 +158,18 @@ fn test_supervised() -> Result<(), Box<dyn std::error::Error>> {
     classes.insert("fake".to_string(), 0.0);
     let classes = classes.clone();
 
-    let mut map = SOM::create(10, 10, 3, true, Some(0.5), None, None, None, Some(classes), false);
+    let mut map = SOM::create(
+        10,
+        10,
+        3,
+        true,
+        Some(0.5),
+        None,
+        None,
+        None,
+        Some(classes),
+        false,
+    );
     let newdat = Array2::from(fmtdata);
     let newdat2 = newdat.clone();
     let newlabel = Array1::from(fmtclass);
@@ -172,4 +192,3 @@ fn test_supervised() -> Result<(), Box<dyn std::error::Error>> {
 
     Ok(())
 }
-
