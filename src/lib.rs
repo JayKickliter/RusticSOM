@@ -397,7 +397,7 @@ impl SOM {
     //       at least one heap allocation. Requires same change to
     //       `Self::winner()`.
     //
-    pub fn winner_dist(&mut self, elem: Array1<f64>) -> ((usize, usize), f64) {
+    pub fn winner_dist(&self, elem: Array1<f64>) -> ((usize, usize), f64) {
         // TODO: use more descriptive names than temp[..]
         let tempelem = elem.clone();
         let temp = self.winner(elem);
@@ -415,7 +415,7 @@ impl SOM {
     }
 
     /// Returns values associated with winner node from map and tag_map
-    pub fn winner_vals(&mut self, elem: Array1<f64>) -> (((usize, usize), f64), String) {
+    pub fn winner_vals(&self, elem: Array1<f64>) -> (((usize, usize), f64), String) {
         // TODO: use more descriptive names than temp[..]
         let temp = self.winner(elem.clone());
         self.data.tag_map.index_axis(Axis(0), temp.0).index_axis(Axis(0), temp.1);
