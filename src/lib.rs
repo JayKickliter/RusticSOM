@@ -119,10 +119,6 @@ impl SOM {
                 }
             }
         }
-
-        if let Some(elem) = self.data.activation_map.get_mut(ret) {
-            *(elem) += 1;
-        }
         ret
     }
 
@@ -234,6 +230,9 @@ impl SOM {
                 temp3[i] = data[[random_value as usize, i]];
             }
             let win = self.winner(temp1);
+            if let Some(elem) = self.data.activation_map.get_mut(win) {
+                *(elem) += 1;
+            }
             self.update(temp3, win, iteration);
         }
     }
@@ -263,6 +262,9 @@ impl SOM {
             }
             ctemp1 = class_data[random_value as usize].clone();
             let win = self.winner(temp1);
+            if let Some(elem) = self.data.activation_map.get_mut(win) {
+                *(elem) += 1;
+            }
             self.update_supervised(ctemp1, win, iteration);
         }
     }

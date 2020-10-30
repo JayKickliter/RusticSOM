@@ -6,7 +6,7 @@ library(data.table)
 library(tidyverse)
 library(dplyr)
 library(ggplot2)
-
+library(RColorBrewer)
 result_usup  <- fromJSON(file = "output_unsupervised.json")
 
 result_sup <- fromJSON(file = "output_supervised.json")
@@ -106,14 +106,31 @@ results <- data.table(
                      activation.map = per,
                      total.wins = result_sup$tag_activation_map_intermed$data
 )
+hm10_usup <- function(res, name) {
+  r <- range(res$activation.map)
+  plot1 <- ggplot(data = res, aes(x = column, y = row, fill = activation.map)) +
+    geom_tile(color = "white") +
+    scale_fill_gradient2(low = "#1B9E77", high = "#D95F02", mid = "white",
+                               midpoint = 25, limit = c(r[1], r[2]), space = "Lab",
+                               name = "Activations") +
+    theme_minimal() +
+    theme(axis.text.x = element_text(angle = 45, vjust = 1,
+                                        size = 12, hjust = 1)) +
+    geom_text(aes(label = tag.map), size = 2) +
+    coord_fixed()
+
+  pdf(name)
+  print(plot1)
+  dev.off()
+}
 
 hm10 <- function(res, name) {
   r <- range(res$activation.map)
   plot1 <- ggplot(data = res, aes(x = column, y = row, fill = activation.map)) +
     geom_tile(color = "white") +
-    scale_fill_gradient2(low = "red", high = "green", mid = "white",
-                               midpoint = 61, limit = c(r[1], r[2]), space = "Lab",
-                               name = "total wins") +
+    scale_fill_gradient2(low = "#1B9E77", high = "#D95F02", mid = "white",
+                               midpoint = 50, limit = c(r[1], r[2]), space = "Lab",
+                               name = "Win Percentage \nReal") +
     theme_minimal() +
     theme(axis.text.x = element_text(angle = 45, vjust = 1,
                                         size = 12, hjust = 1)) +
@@ -126,4 +143,4 @@ hm10 <- function(res, name) {
 }
 
 hm10(results, "som10_supervised.pdf")
-hm10(results2, "som10_unsupervised.pdf")
+hm10_usup(results2, "som10_unsupervised.pdf")
