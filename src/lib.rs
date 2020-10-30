@@ -100,7 +100,7 @@ impl SOM {
     //
     // TODO: (breaking-change) switch `elem` to `ArrayView1`. See todo
     //       for `Self::winner_dist()`.
-    pub fn winner(&mut self, sample: Array1<f64>) -> (usize, usize) {
+    pub fn winner(&self, sample: Array1<f64>) -> (usize, usize) {
         let mut temp: Array1<f64> = Array1::<f64>::zeros(self.data.z);
         let mut min: f64 = std::f64::MAX;
         let mut ret: (usize, usize) = (0, 0);
