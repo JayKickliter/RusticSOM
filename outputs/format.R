@@ -7,6 +7,9 @@ library(tidyverse)
 library(dplyr)
 library(ggplot2)
 library(RColorBrewer)
+library(grid)
+library(gridExtra)
+library(kableExtra)
 result_usup  <- fromJSON(file = "output_unsupervised.json")
 
 result_sup <- fromJSON(file = "output_supervised.json")
@@ -62,13 +65,21 @@ umapdata.fspl <- foreach(i=iter(slist)) %do% {
 tlist <- seq(0, 198, by=2)
 
 tagwins.real  <- foreach(i=iter(tlist)) %do% {
-  x <- i+1
+  x <- if(grep("real", names(result_sup$classes)) == 1) {
+    i+1
+  } else {
+    i+2
+  }
+
   output.tagwins.real <- result_wins$map.wins[x]
 
 }
-
 tagwins.fake  <- foreach(i=iter(tlist)) %do% {
-  y <- i+2
+  y <- if(grep("fake", names(result_sup$classes)) == 1) {
+    i+1
+  } else {
+    i+2
+  }
   output.tagwins.fake <- result_wins$map.wins[y]
 }
 
@@ -110,7 +121,7 @@ hm10_usup <- function(res, name) {
   r <- range(res$activation.map)
   plot1 <- ggplot(data = res, aes(x = column, y = row, fill = activation.map)) +
     geom_tile(color = "white") +
-    scale_fill_gradient2(low = "#1B9E77", high = "#D95F02", mid = "white",
+    scale_fill_gradient2(high = "#1B9E77", low = "#D95F02", mid = "white",
                                midpoint = 25, limit = c(r[1], r[2]), space = "Lab",
                                name = "Activations") +
     theme_minimal() +
@@ -126,9 +137,10 @@ hm10_usup <- function(res, name) {
 
 hm10 <- function(res, name) {
   r <- range(res$activation.map)
+  pdf(name, paper = "legal")
   plot1 <- ggplot(data = res, aes(x = column, y = row, fill = activation.map)) +
     geom_tile(color = "white") +
-    scale_fill_gradient2(low = "#1B9E77", high = "#D95F02", mid = "white",
+    scale_fill_gradient2(high = "#1B9E77", low = "#D95F02", mid = "white",
                                midpoint = 50, limit = c(r[1], r[2]), space = "Lab",
                                name = "Win Percentage \nReal") +
     theme_minimal() +
@@ -137,8 +149,16 @@ hm10 <- function(res, name) {
     geom_text(aes(label = tag.map), size = 2) +
     coord_fixed()
 
-  pdf(name)
+  df1 <- data.table(column = unlist(res$column, recursive = FALSE),
+                    row = unlist(res$row, recursive = TRUE),
+                    rssi = unlist(res$rssi, recursive = TRUE),
+                    snr = unlist(res$snr, recursive = TRUE),
+                    fspl = unlist(res$fspl, recursive = TRUE),
+                    percentage = unlist(res$activation.map, recursive = TRUE))
   print(plot1)
+  tt <- ttheme_default(base_size = 6, fg_params = list(parse=TRUE))
+  tbl <- tableGrob(df1, rows = NULL, cols = NULL, theme=ttq
+  grid.arrange(tbl, nrow = 1, as.table=TRUE, newpage = TRUE)
   dev.off()
 }
 

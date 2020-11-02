@@ -282,6 +282,9 @@ impl SOM {
         for x in data.genrows() {
             let y = x.to_owned();
             let win = self.winner(y);
+            if let Some(elem) = self.data.activation_map.get_mut(win) {
+                *(elem) += 1;
+            }
             if let Some(res) = temp_map.get(&class_data[n]) {
                 self.data.tag_activation_map[[win.0, win.1, *res]] += 1;
             }
