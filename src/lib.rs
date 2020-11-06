@@ -122,19 +122,6 @@ impl SOM {
         ret
     }
 
-    pub fn from_json(
-        serialized: &str,
-        decay_fn: Option<DecayFn>,
-        neighbourhood_fn: Option<NeighbourhoodFn>,
-    ) -> serde_json::Result<SOM> {
-        let data: SomData = serde_json::from_str(&serialized)?;
-
-        Ok(SOM {
-            data,
-            decay_fn: decay_fn.unwrap_or(default_decay_fn),
-            neighbourhood_fn: neighbourhood_fn.unwrap_or(gaussian),
-        })
-    }
     pub fn to_json(&self) -> serde_json::Result<String> {
         serde_json::to_string_pretty(&self.data)
     }
@@ -549,6 +536,20 @@ fn euclid_dist(a: ArrayView1<f64>, b: ArrayView1<f64>) -> f64 {
         .map(|(a, b)| (a - b).powi(2))
         .sum::<f64>()
         .sqrt()
+}
+
+pub fn from_json(
+    serialized: &str,
+    decay_fn: Option<DecayFn>,
+    neighbourhood_fn: Option<NeighbourhoodFn>,
+) -> serde_json::Result<SOM> {
+    let data: SomData = serde_json::from_str(&serialized)?;
+
+    Ok(SOM {
+        data,
+        decay_fn: decay_fn.unwrap_or(default_decay_fn),
+        neighbourhood_fn: neighbourhood_fn.unwrap_or(gaussian),
+    })
 }
 
 // Unit-testing module - only compiled when "cargo test" is run!
