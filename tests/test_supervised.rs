@@ -92,6 +92,7 @@ fn test_unsupervised() -> Result<(), Box<dyn std::error::Error>> {
         None,
         Some(classes),
         None,
+        Some([1,2,3,4,5,6,7,8,9,10,11,1,2,3,4,5,6,7,8,9,10,11,1,2,3,4,5,6,7,8,9,10])
     );
     let newdat = Array2::from(fmtdata);
     let newdat2 = newdat.clone();
@@ -169,6 +170,7 @@ fn test_supervised() -> Result<(), Box<dyn std::error::Error>> {
         None,
         Some(classes),
         None,
+        Some([1,2,3,4,5,6,7,8,9,10,11,1,2,3,4,5,6,7,8,9,10,11,1,2,3,4,5,6,7,8,9,10])
     );
     let newdat = Array2::from(fmtdata);
     let newdat2 = newdat.clone();

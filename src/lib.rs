@@ -1,6 +1,8 @@
 use ndarray::{Array1, Array2, Array3, ArrayView1, ArrayView2, Axis};
 use rand::random;
 use rand::Rng;
+use rand::SeedableRng;
+use rand::rngs::StdRng;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::f64::consts::PI;
@@ -22,6 +24,7 @@ pub struct SomData {
     tag_activation_map_intermed: Array2<usize>, // Identical to tag activation map but preserving a copy between unsupervised and supervised learning
     classes: HashMap<String, f64>,              // X classes with Y associated weights
     custom_weighting: bool, // Flag to enable custom weighting of classes or automatically weight by class distribution in training set
+    random_seed: Option<[u8; 32]>,
 }
 
 /// A function for determining neighbours' weights.
@@ -51,11 +54,23 @@ impl SOM {
         neighbourhood_fn: Option<NeighbourhoodFn>,
         classes: Option<HashMap<String, f64>>,
         custom_weighting: Option<bool>,
+        random_seed: Option<[u8; 32]>,
     ) -> SOM {
         // Map of "length" x "breadth" is created, with depth "inputs" (for input vectors accepted by this SOM)
         // randomize: boolean; whether the SOM must be initialized with random weights or not
         let the_map = if randomize {
-            Array3::from_shape_simple_fn((length, breadth, inputs), random)
+            match random_seed {
+                Some(s) => {
+                    let mut rng: StdRng = SeedableRng::from_seed(s);
+                    let randfn =|| {
+                        rng.gen_range(0.0, 1.0) as f64
+                    };
+                    Array3::from_shape_simple_fn((length, breadth, inputs), randfn)
+                }
+                None => {
+                    Array3::from_shape_simple_fn((length, breadth, inputs), random)
+                }
+            }
         } else {
             Array3::zeros((length, breadth, inputs))
         };
@@ -88,6 +103,7 @@ impl SOM {
                     false
                 }
             },
+            random_seed,
         };
         SOM {
             data,
@@ -140,11 +156,7 @@ impl SOM {
         );
         let g =
             (self.neighbourhood_fn)((self.data.x, self.data.y), winner, new_sig as f32) * new_lr;
-        /*
-        let mut temp_map: Array3<f64> = Array3::ones((self.data.x, self.data.y, self.data.z));
-        temp_map = temp_map.map(|x| x.dot(elem));
-        self.data.map = self.data.map.clone() + (temp_map - self.data.map.clone()) * g;
-        */
+
         for i in 0..self.data.x {
             for j in 0..self.data.y {
                 for k in 0..self.data.z {
@@ -182,8 +194,18 @@ impl SOM {
             .unwrap_or(&0.0)
             .to_owned();
 
-        let rand_matrix: Array2<f64> =
-            Array2::from_shape_simple_fn((self.data.x, self.data.y), random);
+        let rand_matrix: Array2<f64> = match self.data.random_seed {
+            Some(s) => {
+                let mut rng: StdRng = SeedableRng::from_seed(s);
+                let randfn =|| {
+                    rng.gen_range(0.0, 1.0) as f64
+                };
+                Array2::from_shape_simple_fn((self.data.x, self.data.y), randfn)
+            }
+            None => {
+                Array2::from_shape_simple_fn((self.data.x, self.data.y), random)
+            }
+        };
 
         let class_change_matrix = g * winner_weight;
 
@@ -206,11 +228,21 @@ impl SOM {
         let mut temp2: Array1<f64>;
         let mut temp3: Array1<f64>;
         self.update_regulate_lrate(iterations);
+        let mut rng: StdRng = match self.data.random_seed {
+            Some(s) => {
+                let r: StdRng = SeedableRng::from_seed(s);
+                r
+            }
+            None => {
+                let r: StdRng = SeedableRng::from_rng(rand::thread_rng()).unwrap();
+                r
+            }
+        };
         for iteration in 0..iterations {
             temp1 = Array1::<f64>::zeros(ndarray::ArrayBase::dim(&data).1);
             temp2 = Array1::<f64>::zeros(ndarray::ArrayBase::dim(&data).1);
             temp3 = Array1::<f64>::zeros(ndarray::ArrayBase::dim(&data).1);
-            random_value = rand::thread_rng().gen_range(0, ndarray::ArrayBase::dim(&data).0 as i32);
+            random_value = rng.gen_range(0, ndarray::ArrayBase::dim(&data).0 as i32);
             for i in 0..ndarray::ArrayBase::dim(&data).1 {
                 temp1[i] = data[[random_value as usize, i]];
                 temp2[i] = data[[random_value as usize, i]];
@@ -241,9 +273,20 @@ impl SOM {
         if !self.data.custom_weighting {
             self.cal_class_weights(class_data.clone());
         }
+        let mut rng: StdRng = match self.data.random_seed {
+            Some(s) => {
+                let r: StdRng = SeedableRng::from_seed(s);
+                r
+            }
+            None => {
+                let r: StdRng = SeedableRng::from_rng(rand::thread_rng()).unwrap();
+                r
+            }
+        };
         for iteration in 0..iterations {
             temp1 = Array1::<f64>::zeros(ndarray::ArrayBase::dim(&data).1);
-            random_value = rand::thread_rng().gen_range(0, ndarray::ArrayBase::dim(&data).0 as i32);
+            random_value = rng.gen_range(0, ndarray::ArrayBase::dim(&data).0 as i32);
+            //random_value = rand::thread_rng().gen_range(0, ndarray::ArrayBase::dim(&data).0 as i32);
             for i in 0..ndarray::ArrayBase::dim(&data).1 {
                 temp1[i] = data[[random_value as usize, i]];
             }
@@ -544,7 +587,6 @@ pub fn from_json(
     neighbourhood_fn: Option<NeighbourhoodFn>,
 ) -> serde_json::Result<SOM> {
     let data: SomData = serde_json::from_str(&serialized)?;
-
     Ok(SOM {
         data,
         decay_fn: decay_fn.unwrap_or(default_decay_fn),
@@ -560,7 +602,18 @@ mod tests {
 
     #[test]
     fn test_winner() {
-        let mut map = SOM::create(2, 3, 5, false, Some(0.1), None, None, None, None, None);
+        let mut map = SOM::create(
+            2,
+            3,
+            5,
+            false,
+            Some(0.1),
+            None,
+            None,
+            None,
+            None,
+            None,
+            Some([1,2,3,4,5,6,7,8,9,10,11,1,2,3,4,5,6,7,8,9,10,11,1,2,3,4,5,6,7,8,9,10]));
 
         for k in 0..5 {
             map.set_map_cell((1, 1, k), 1.5);
