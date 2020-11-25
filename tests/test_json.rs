@@ -8,7 +8,7 @@ use rusticsom::*;
 fn t_full_test() {
     // Run with `cargo test -- --nocapture` to get output!
     // Plotted with Matplotlib
-    let mut map = SOM::create(10, 10, 4, false, None, None, None, None, None, None);
+    let mut map = SOM::create(10, 10, 4, false, None, None, None, None, None, None, None);
     let data = array![
         [5.1, 3.5, 1.4, 0.2],
         [4.9, 3.0, 1.4, 0.2],
@@ -175,7 +175,7 @@ fn t_full_test() {
 
     let json = map.to_json().unwrap();
 
-    let map_imported = SOM::from_json(&json, None, None).unwrap();
+    let map_imported = rusticsom::from_json(&json, None, None).unwrap();
 
     for x in data2.genrows() {
         let y1 = x.to_owned();
