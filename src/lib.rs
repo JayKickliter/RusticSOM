@@ -19,7 +19,7 @@ pub struct SomData {
     maximum_iterations: u32, // Maximum number of iterations per training session
     pub map: Array3<f64>,    // the SOM itself
     activation_map: Array2<usize>, // each cell represents how many times the corresponding cell in SOM was winner
-    pub tag_map: Array2<String>, // each cell contains the associated classification predicted by the SOM
+    pub tag_map: Array2<Option<String>>, // each cell contains the associated classification predicted by the SOM
     tag_activation_map: Array3<usize>, // each cell represents the how many times the corresponding tag was winner for a cell
     tag_activation_map_intermed: Array2<usize>, // Identical to tag activation map but preserving a copy between unsupervised and supervised learning
     classes: HashMap<String, f64>,              // X classes with Y associated weights
@@ -75,7 +75,7 @@ impl SOM {
             Array3::zeros((length, breadth, inputs))
         };
         let act_map = Array2::zeros((length, breadth));
-        let tag_map = Array2::from_elem((length, breadth), "undefined".to_string());
+        let tag_map = Array2::from_elem((length, breadth), None);
         let data = SomData {
             x: length,
             y: breadth,
@@ -173,7 +173,7 @@ impl SOM {
     }
 
     // Update the weights of the SOM
-    fn update_supervised(&mut self, elem: String, winner: (usize, usize), iteration_index: u32) {
+    fn update_supervised(&mut self, elem: &str, winner: (usize, usize), iteration_index: u32) {
         let new_lr = (self.decay_fn)(
             self.data.learning_rate,
             iteration_index,
@@ -189,10 +189,11 @@ impl SOM {
             (self.neighbourhood_fn)((self.data.x, self.data.y), winner, new_sig as f32) * new_lr;
         let winner_weight = self
             .data
-            .classes
-            .get(&self.data.tag_map[[winner.0, winner.1]])
-            .unwrap_or(&0.0)
-            .to_owned();
+            .tag_map
+            .get([winner.0, winner.1])
+            .unwrap()
+            .as_ref()
+            .map_or(0.0, |tag| *self.data.classes.get(tag).unwrap_or(&0.0));
 
         let rand_matrix: Array2<f64> = match self.data.random_seed {
             Some(s) => {
@@ -214,7 +215,7 @@ impl SOM {
         for i in 0..self.data.x {
             for j in 0..self.data.y {
                 if modified_classes[[i, j]] > 1.0 {
-                    self.data.tag_map[[i, j]] = elem.clone();
+                    self.data.tag_map[[i, j]] = Some(elem.to_owned());
                 }
             }
         }
@@ -268,7 +269,6 @@ impl SOM {
         self.initialize_classes(data.clone(), class_data.clone());
         let mut random_value: i32;
         let mut temp1: Array1<f64>;
-        let mut ctemp1: String;
         self.update_regulate_lrate(iterations);
         if !self.data.custom_weighting {
             self.cal_class_weights(class_data.clone());
@@ -290,7 +290,7 @@ impl SOM {
             for i in 0..ndarray::ArrayBase::dim(&data).1 {
                 temp1[i] = data[[random_value as usize, i]];
             }
-            ctemp1 = class_data[random_value as usize].clone();
+            let ctemp1 = class_data.get([random_value as usize]).unwrap();
             let win = self.winner(temp1);
             if let Some(elem) = self.data.activation_map.get_mut(win) {
                 *(elem) += 1;
@@ -334,7 +334,7 @@ impl SOM {
                 }
                 for (k, v) in temp_map.iter() {
                     if v == &class {
-                        self.data.tag_map[[i, j]] = k.clone();
+                        self.data.tag_map[[i, j]] = Some(k.to_owned());
                     }
                 }
             }
@@ -352,7 +352,6 @@ impl SOM {
         self.data.maximum_iterations = iterations;
         let mut random_value: i32;
         let mut temp1: Array1<f64>;
-        let mut ctemp1: String;
         let mut temp2: Array1<f64>;
         if !self.data.custom_weighting {
             self.cal_class_weights(class_data.clone());
@@ -366,8 +365,8 @@ impl SOM {
                 temp1[i] = data[[random_value as usize, i]];
                 temp2[i] = data[[random_value as usize, i]];
             }
-            ctemp1 = class_data[random_value as usize].clone();
-            if ctemp1 != "undefined".to_string() {
+            let ctemp1 = class_data.get([random_value as usize]).unwrap();
+            if ctemp1 != "undefined" {
                 let win = self.winner(temp1);
                 self.update_supervised(ctemp1, win, iteration);
             } else {
@@ -448,13 +447,14 @@ impl SOM {
     }
 
     /// Returns values associated with winner node from map and tag_map
-    pub fn winner_vals(&self, elem: Array1<f64>) -> (((usize, usize), f64), String) {
+    pub fn winner_vals(&self, elem: Array1<f64>) -> (((usize, usize), f64), Option<String>) {
         // TODO: use more descriptive names than temp[..]
         let temp = self.winner(elem.clone());
         self.data.tag_map.index_axis(Axis(0), temp.0).index_axis(Axis(0), temp.1);
         // TODO: Get rid of this clone!
         (self.winner_dist(elem), self.data.tag_map[[temp.0, temp.1]].clone())
     }
+
     // Returns size of SOM.
     pub fn get_size(&self) -> (usize, usize) {
         (self.data.x, self.data.y)
