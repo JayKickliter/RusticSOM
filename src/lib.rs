@@ -94,7 +94,7 @@ impl SOM {
                 }
             },
             tag_activation_map_intermed: Array2::zeros((length, breadth)),
-            classes: classes.unwrap_or(HashMap::new()),
+            classes: classes.unwrap_or_default(),
             regulate_lrate: 0,
             custom_weighting: {
                 if let Some(w) = custom_weighting {
