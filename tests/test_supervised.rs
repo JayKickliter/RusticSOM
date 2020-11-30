@@ -1,4 +1,3 @@
-use csv;
 use ndarray::{Array1, Array2};
 use rusticsom::SOM;
 use serde::{Deserialize, Serialize};
@@ -157,7 +156,6 @@ fn test_supervised() -> Result<(), Box<dyn std::error::Error>> {
     let mut classes: HashMap<String, f64> = HashMap::new();
     classes.insert("real".to_string(), 0.0);
     classes.insert("fake".to_string(), 0.0);
-    let classes = classes.clone();
 
     let mut map = SOM::create(
         10,
